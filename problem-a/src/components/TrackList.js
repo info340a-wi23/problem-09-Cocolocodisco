@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router';
+import { useEffect } from 'react';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons'
 
 const TRACK_QUERY_TEMPLATE = 'https://itunes.apple.com/lookup?id={collectionId}&limit=50&entity=song'
 
-export default function TrackList({setAlertMessage}) { //setAlertMessage callback as prop
+export default function TrackList({ setAlertMessage }) { //setAlertMessage callback as prop
   const [trackData, setTrackData] = useState([]); //tracks to show
   const [isQuerying, setIsQuerying] = useState(false); //for spinner
   const [previewAudio, setPreviewAudio] = useState(null); //for playing previews!
@@ -14,11 +15,48 @@ export default function TrackList({setAlertMessage}) { //setAlertMessage callbac
   const urlParams = useParams(); //get album from URL
 
   //YOUR CODE GOES HERE
+  useEffect(() => {
+    setIsQuerying(true)
+    const url = TRACK_QUERY_TEMPLATE.replace("{collectionId}", urlParams.collectionId)
+
+    setAlertMessage(null)
+
+    fetch(url)
+      .then((response) => {
+        const jsonPromise = response.json();
+
+        return jsonPromise
+      })
+      .then((result) => {
+        console.log(result)
+        if (result == undefined) {
+          setAlertMessage("No tracks found for album.")
+        }
+        let receivedData = result.results
+
+        receivedData = receivedData.slice(1)
+
+        if (receivedData.length == 0) {
+          setAlertMessage("No tracks found for album.")
+        }
+
+        setTrackData(receivedData)
+      })
+      .catch((error) => {
+        const erromsg = error.message
+        setAlertMessage(erromsg)
+      }).then(()=>{
+        setIsQuerying(false)
+      })
+
+
+
+  }, [urlParams.collectionId, setAlertMessage])
 
 
   //for fun: allow for clicking to play preview audio!
   const togglePlayingPreview = (previewUrl) => {
-    if(!previewAudio) { //nothing playing now
+    if (!previewAudio) { //nothing playing now
       const newPreview = new Audio(previewUrl);
       newPreview.addEventListener('ended', () => setPreviewAudio(null)) //stop on end
       setPreviewAudio(newPreview); //rerender and save
@@ -35,7 +73,7 @@ export default function TrackList({setAlertMessage}) { //setAlertMessage callbac
   //render the track elements
   const trackElemArray = trackData.map((track) => {
     let classList = "track-record";
-    if(previewAudio && previewAudio.src === track.previewUrl){
+    if (previewAudio && previewAudio.src === track.previewUrl) {
       classList += " fa-spin"; //spin if previewing
     }
 
@@ -46,13 +84,13 @@ export default function TrackList({setAlertMessage}) { //setAlertMessage callbac
           <p className="track-artist">({track.artistName})</p>
         </div>
         <p className="text-center">Track {track.trackNumber}</p>
-      </div>      
+      </div>
     )
   })
 
   return (
     <div>
-      {isQuerying && <FontAwesomeIcon icon={faSpinner} spin size="4x" aria-label="Loading..." aria-hidden="false"/>}
+      {isQuerying && <FontAwesomeIcon icon={faSpinner} spin size="4x" aria-label="Loading..." aria-hidden="false" />}
       <div className="d-flex flex-wrap">
         {trackElemArray}
       </div>
